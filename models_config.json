@@ -1,0 +1,92 @@
+{
+  "models": [
+    {
+      "modelId": "openai-gpt4o",
+      "modelName": "gpt-4o",
+      "providerName": "OpenAI",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "OpenAI GPT-4o - multimodal model with vision support"
+    },
+    {
+      "modelId": "openai-gpt4o-mini",
+      "modelName": "gpt-4o-mini",
+      "providerName": "OpenAI",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "OpenAI GPT-4o Mini - lightweight multimodal model"
+    },
+    {
+      "modelId": "openai-gpt4-turbo",
+      "modelName": "gpt-4-turbo",
+      "providerName": "OpenAI",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "OpenAI GPT-4 Turbo with vision capabilities"
+    },
+    {
+      "modelId": "azure-gpt4o",
+      "modelName": "gpt-4o",
+      "providerName": "Azure OpenAI",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "Azure OpenAI GPT-4o deployment"
+    },
+    {
+      "modelId": "azure-gpt4o-mini",
+      "modelName": "gpt-4o-mini",
+      "providerName": "Azure OpenAI",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "Azure OpenAI GPT-4o Mini deployment"
+    },
+    {
+      "modelId": "anthropic-claude-sonnet",
+      "modelName": "claude-sonnet-4-20250514",
+      "providerName": "Anthropic",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "Anthropic Claude Sonnet 4 via direct API"
+    },
+    {
+      "modelId": "anthropic-claude-haiku",
+      "modelName": "claude-3-5-haiku-20241022",
+      "providerName": "Anthropic",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "Anthropic Claude 3.5 Haiku via direct API"
+    },
+    {
+      "modelId": "bedrock-claude-sonnet",
+      "modelName": "anthropic.claude-sonnet-4-20250514-v1:0",
+      "providerName": "AWS Bedrock",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "Anthropic Claude Sonnet 4 via AWS Bedrock"
+    },
+    {
+      "modelId": "bedrock-claude-haiku",
+      "modelName": "anthropic.claude-3-5-haiku-20241022-v1:0",
+      "providerName": "AWS Bedrock",
+      "temperature": 0.7,
+      "supportsVision": true,
+      "description": "Anthropic Claude 3.5 Haiku via AWS Bedrock"
+    },
+    {
+      "modelId": "bedrock-llama3-70b",
+      "modelName": "meta.llama3-70b-instruct-v1:0",
+      "providerName": "AWS Bedrock",
+      "temperature": 0.7,
+      "supportsVision": false,
+      "description": "Meta Llama 3 70B Instruct via AWS Bedrock"
+    },
+    {
+      "modelId": "bedrock-llama3-8b",
+      "modelName": "meta.llama3-8b-instruct-v1:0",
+      "providerName": "AWS Bedrock",
+      "temperature": 0.7,
+      "supportsVision": false,
+      "description": "Meta Llama 3 8B Instruct via AWS Bedrock"
+    }
+  ]
+}
