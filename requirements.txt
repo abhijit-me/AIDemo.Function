@@ -1,5 +1,5 @@
 azure-functions
-Flask
+azure-data-tables
 openai>=1.0.0
 anthropic>=0.20.0
 boto3>=1.34.0

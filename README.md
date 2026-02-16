@@ -1,6 +1,6 @@
 # Multi-Provider LLM API — Azure Function
 
-A Python Azure Function that provides a unified REST API for interacting with multiple Large Language Model (LLM) providers. Built with **Flask** for API routing and the respective provider SDKs for backend communication.
+A Python Azure Function that provides a unified REST API for interacting with multiple Large Language Model (LLM) providers and user management. Built natively on the **Azure Functions** Python v2 programming model with **Azure Table Storage** for user data persistence.
 
 ## Supported Providers
 
@@ -14,22 +14,22 @@ A Python Azure Function that provides a unified REST API for interacting with mu
 ## Project Structure
 
 ```
-├── function_app.py          # Azure Functions entry point (WSGI adapter)
-├── flask_app.py             # Flask application with all API endpoints
-├── models_config.json       # Model configuration (editable)
-├── host.json                # Azure Functions host configuration
-├── local.settings.json      # Local environment variables (git-ignored)
-├── requirements.txt         # Python dependencies
-├── .gitignore               # Git ignore rules
+├── function_app.py              # Azure Functions entry point (all HTTP triggers)
+├── models_config.json           # Model + user storage configuration (editable)
+├── host.json                    # Azure Functions host configuration
+├── local.settings.json          # Local environment variables (git-ignored)
+├── requirements.txt             # Python dependencies
+├── .gitignore                   # Git ignore rules
 ├── services/
-│   ├── __init__.py          # Services package init
-│   ├── base_provider.py     # Abstract base class for all providers
-│   ├── openai_provider.py   # OpenAI API integration
-│   ├── azure_openai_provider.py  # Azure OpenAI integration
-│   ├── anthropic_provider.py     # Anthropic Claude integration
-│   ├── bedrock_provider.py       # AWS Bedrock integration (Claude + Llama)
-│   ├── provider_factory.py  # Factory to instantiate the correct provider
-│   └── config_loader.py     # Configuration file loader and accessor
+│   ├── __init__.py              # Services package init
+│   ├── base_provider.py         # Abstract base class for all providers
+│   ├── openai_provider.py       # OpenAI API integration
+│   ├── azure_openai_provider.py # Azure OpenAI integration
+│   ├── anthropic_provider.py    # Anthropic Claude integration
+│   ├── bedrock_provider.py      # AWS Bedrock integration (Claude + Llama)
+│   ├── provider_factory.py      # Factory to instantiate the correct provider
+│   ├── config_loader.py         # Configuration file loader and accessor
+│   └── user_service.py          # User CRUD operations via Azure Table Storage
 └── README.md
 ```
 
@@ -136,11 +136,143 @@ Returns the health status of the function.
 }
 ```
 
+### 5. Add New User
+
+```
+POST /api/users
+Content-Type: application/json
+```
+
+Creates a new user in Azure Table Storage. The password should be sent already base64-encoded (btoa format) from the UI.
+
+**Request Body:**
+```json
+{
+  "username": "johndoe",
+  "password": "cGFzc3dvcmQxMjM=",
+  "isAdmin": false
+}
+```
+
+**Response (201):**
+```json
+{
+  "user": {
+    "username": "johndoe",
+    "password": "cGFzc3dvcmQxMjM=",
+    "isAdmin": false
+  }
+}
+```
+
+**Error (409):**
+```json
+{
+  "error": "User 'johndoe' already exists."
+}
+```
+
+### 6. Delete User
+
+```
+DELETE /api/users/{username}
+```
+
+Deletes a user by username.
+
+**Response (200):**
+```json
+{
+  "message": "User 'johndoe' deleted successfully."
+}
+```
+
+**Error (404):**
+```json
+{
+  "error": "User 'johndoe' not found."
+}
+```
+
+### 7. Update User
+
+```
+PUT /api/users/{username}
+Content-Type: application/json
+```
+
+Updates a user's password and/or admin flag. At least one field must be provided. The password should be sent already base64-encoded (btoa format) from the UI.
+
+**Request Body:**
+```json
+{
+  "password": "bmV3cGFzc3dvcmQ=",
+  "isAdmin": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "user": {
+    "username": "johndoe",
+    "password": "bmV3cGFzc3dvcmQ=",
+    "isAdmin": true
+  }
+}
+```
+
+**Error (404):**
+```json
+{
+  "error": "User 'johndoe' not found."
+}
+```
+
+### 8. Validate User
+
+```
+POST /api/users/validate
+Content-Type: application/json
+```
+
+Validates a user's credentials. Takes a username and a base64-encoded (btoa) password, and returns the full user object if the credentials are valid.
+
+**Request Body:**
+```json
+{
+  "username": "johndoe",
+  "password": "cGFzc3dvcmQxMjM="
+}
+```
+
+**Response (200):**
+```json
+{
+  "user": {
+    "username": "johndoe",
+    "password": "cGFzc3dvcmQxMjM=",
+    "isAdmin": false
+  }
+}
+```
+
+**Error (401):**
+```json
+{
+  "error": "Invalid username or password."
+}
+```
+
 ## Configuration
 
 ### Models Configuration (`models_config.json`)
 
-The available models are defined in `models_config.json`. Each entry has:
+The configuration file contains two sections: model definitions and user storage settings.
+
+#### Models
+
+Each model entry has:
 
 | Field | Type | Description |
 |---|---|---|
@@ -153,12 +285,23 @@ The available models are defined in `models_config.json`. Each entry has:
 
 To add a new model, simply add a new entry to the `models` array in the JSON file.
 
+#### User Storage
+
+The `userStorage` section configures Azure Table Storage for user management:
+
+| Field | Type | Description |
+|---|---|---|
+| `tableName` | string | Name of the Azure Table Storage table (default: `Users`) |
+| `partitionKey` | string | Partition key used for all user entities (default: `user`) |
+| `connectionStringEnvVar` | string | Environment variable name that holds the Azure Storage connection string |
+
 ### Environment Variables
 
 Set these in `local.settings.json` for local development, or in Azure Function Application Settings for production:
 
 | Variable | Required For | Description |
 |---|---|---|
+| `AZURE_STORAGE_CONNECTION_STRING` | User Management | Connection string for Azure Table Storage |
 | `OPENAI_API_KEY` | OpenAI | API key for OpenAI |
 | `AZURE_OPENAI_API_KEY` | Azure OpenAI | API key for Azure OpenAI resource |
 | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI | Azure OpenAI resource endpoint URL |
@@ -168,7 +311,7 @@ Set these in `local.settings.json` for local development, or in Azure Function A
 | `AWS_SECRET_ACCESS_KEY` | AWS Bedrock | AWS secret access key |
 | `AWS_REGION` | AWS Bedrock | AWS region (default: `us-east-1`) |
 
-> **Note:** You only need to configure the environment variables for the providers you intend to use. If you only use OpenAI models, only `OPENAI_API_KEY` is required.
+> **Note:** You only need to configure the environment variables for the providers and features you intend to use. `AZURE_STORAGE_CONNECTION_STRING` is required for all user management endpoints.
 
 ## Local Development
 
@@ -185,7 +328,7 @@ Set these in `local.settings.json` for local development, or in Azure Function A
    ```
 
 2. **Configure environment variables:**
-   Copy and edit `local.settings.json` with your API keys.
+   Copy and edit `local.settings.json` with your API keys and Azure Storage connection string.
 
 3. **Run the function locally:**
    ```bash
@@ -209,6 +352,24 @@ Set these in `local.settings.json` for local development, or in Azure Function A
    curl -X POST http://localhost:7071/api/chat/vision \
      -H "Content-Type: application/json" \
      -d '{"prompt": "Describe this image.", "imageContent": "<base64-data>", "modelId": "openai-gpt4o"}'
+
+   # Add a user
+   curl -X POST http://localhost:7071/api/users \
+     -H "Content-Type: application/json" \
+     -d '{"username": "johndoe", "password": "cGFzc3dvcmQxMjM=", "isAdmin": false}'
+
+   # Validate a user
+   curl -X POST http://localhost:7071/api/users/validate \
+     -H "Content-Type: application/json" \
+     -d '{"username": "johndoe", "password": "cGFzc3dvcmQxMjM="}'
+
+   # Update a user
+   curl -X PUT http://localhost:7071/api/users/johndoe \
+     -H "Content-Type: application/json" \
+     -d '{"isAdmin": true}'
+
+   # Delete a user
+   curl -X DELETE http://localhost:7071/api/users/johndoe
    ```
 
 ## Deployment
@@ -228,24 +389,28 @@ Client Request
       │
       ▼
 Azure Functions (function_app.py)
-      │  WSGI Middleware
-      ▼
-Flask App (flask_app.py)
-      │  Route matching
-      ▼
-Config Loader (config_loader.py)
-      │  Model lookup by modelId
-      ▼
-Provider Factory (provider_factory.py)
-      │  Instantiate correct provider
-      ▼
-Provider Service (e.g., openai_provider.py)
-      │  Call external API
-      ▼
-LLM Provider API (OpenAI / Azure / Anthropic / Bedrock)
+      │  Native HTTP Triggers
+      ├──────────────────────────────────┐
+      │                                  │
+      ▼                                  ▼
+LLM Endpoints                    User Endpoints
+(models, chat, chat/vision)      (add, delete, update, validate)
+      │                                  │
+      ▼                                  ▼
+Config Loader                    User Service
+(config_loader.py)               (user_service.py)
+      │                                  │
+      ▼                                  ▼
+Provider Factory                 Azure Table Storage
+(provider_factory.py)
       │
       ▼
-Response returned to client
+Provider Service
+(e.g., openai_provider.py)
+      │
+      ▼
+LLM Provider API
+(OpenAI / Azure / Anthropic / Bedrock)
 ```
 
 ## Error Handling
@@ -261,5 +426,7 @@ All endpoints return consistent JSON error responses:
 | HTTP Status | Meaning |
 |---|---|
 | 400 | Bad request (missing fields, unsupported model features) |
-| 404 | Model ID not found in configuration |
+| 401 | Invalid credentials (user validation failed) |
+| 404 | Resource not found (model ID or username) |
+| 409 | Conflict (user already exists) |
 | 500 | Internal server error (API call failure, configuration error) |

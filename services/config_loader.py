@@ -1,9 +1,9 @@
 """
 Configuration loader module.
 
-Loads and provides access to the model configuration from the JSON
-configuration file. Supports retrieving all models or a specific
-model by its unique modelId.
+Loads and provides access to the application configuration from the JSON
+configuration file. Supports retrieving all models, a specific model by
+its unique modelId, and user storage settings for Azure Table Storage.
 """
 
 import json
@@ -19,31 +19,48 @@ CONFIG_FILE_PATH = os.path.join(
     "models_config.json",
 )
 
-# In-memory cache for model configurations
+# In-memory caches
 _models_cache: Optional[List[Dict]] = None
+_full_config_cache: Optional[Dict] = None
 
 
-def _load_config() -> List[Dict]:
+def _load_full_config() -> Dict:
+    """
+    Load the entire configuration from the JSON file.
+
+    Returns:
+        The full configuration dictionary.
+
+    Raises:
+        FileNotFoundError: If the configuration file does not exist.
+        json.JSONDecodeError: If the configuration file contains invalid JSON.
+    """
+    global _full_config_cache
+
+    if _full_config_cache is not None:
+        return _full_config_cache
+
+    logger.info("Loading configuration from: %s", CONFIG_FILE_PATH)
+
+    with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+        _full_config_cache = json.load(f)
+
+    return _full_config_cache
+
+
+def _load_models() -> List[Dict]:
     """
     Load the model configuration from the JSON file.
 
     Returns:
         A list of model configuration dictionaries.
-
-    Raises:
-        FileNotFoundError: If the configuration file does not exist.
-        json.JSONDecodeError: If the configuration file contains invalid JSON.
     """
     global _models_cache
 
     if _models_cache is not None:
         return _models_cache
 
-    logger.info("Loading model configuration from: %s", CONFIG_FILE_PATH)
-
-    with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
-        config = json.load(f)
-
+    config = _load_full_config()
     _models_cache = config.get("models", [])
     logger.info("Loaded %d model configurations.", len(_models_cache))
     return _models_cache
@@ -58,7 +75,7 @@ def get_all_models() -> List[Dict]:
         modelId, modelName, providerName, temperature, supportsVision,
         and description.
     """
-    return _load_config()
+    return _load_models()
 
 
 def get_model_by_id(model_id: str) -> Optional[Dict]:
@@ -71,24 +88,40 @@ def get_model_by_id(model_id: str) -> Optional[Dict]:
     Returns:
         The model configuration dictionary if found, otherwise None.
     """
-    models = _load_config()
+    models = _load_models()
     for model in models:
         if model.get("modelId") == model_id:
             return model
     return None
 
 
+def get_user_storage_config() -> Dict:
+    """
+    Retrieve the user storage configuration for Azure Table Storage.
+
+    Returns:
+        A dictionary with keys:
+            - tableName (str): The Azure Table Storage table name.
+            - partitionKey (str): The partition key used for user entities.
+            - connectionStringEnvVar (str): The environment variable name
+              that holds the Azure Storage connection string.
+    """
+    config = _load_full_config()
+    return config.get("userStorage", {})
+
+
 def reload_config() -> List[Dict]:
     """
     Force a reload of the configuration file.
 
-    Clears the in-memory cache and reloads from disk. Useful if
+    Clears all in-memory caches and reloads from disk. Useful if
     the configuration file has been updated at runtime.
 
     Returns:
         The freshly loaded list of model configurations.
     """
-    global _models_cache
+    global _models_cache, _full_config_cache
     _models_cache = None
+    _full_config_cache = None
     logger.info("Configuration cache cleared. Reloading...")
-    return _load_config()
+    return _load_models()
