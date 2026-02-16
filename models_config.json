@@ -1,4 +1,9 @@
 {
+  "userStorage": {
+    "tableName": "Users",
+    "partitionKey": "user",
+    "connectionStringEnvVar": "AZURE_STORAGE_CONNECTION_STRING"
+  },
   "models": [
     {
       "modelId": "openai-gpt4o",
